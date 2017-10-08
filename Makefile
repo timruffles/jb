@@ -1,7 +1,7 @@
 
 
 qj: qj.c
-	gcc -Wall -Werror -std=c99 -pedantic -O3 qj.c -o qj
+	gcc -Wall -Wextra -pedantic -Werror -Wshadow  -Wstrict-overflow -fno-strict-aliasing -std=c99 -O3 qj.c -o qj
 
 PHONY: test
 test: qj
