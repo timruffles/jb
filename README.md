@@ -54,15 +54,18 @@ construct qj source code programatically. For instance, within shell code:
     > qj ao use $A how${B} you like ac
     ["use","variables","however","you","like"]
 
-qj's operators are all two character codes, followed by a space. Operators 
-determine how qj interprets characters that follow them. They follow a naming 
-scheme, e.g 'sc'
+qj's operators are all two character codes, followed by a space.
+
+### Paired operators
+
+Operators determine how qj interprets characters that follow them.
+They follow a naming scheme, e.g 'sc'
 
     s                c
 
     string           close
 
-    object type      action    
+    kind             action    
 
 So, for instance, ao is 'array open'. The standard actions are:
 
@@ -70,7 +73,7 @@ So, for instance, ao is 'array open'. The standard actions are:
 - c - close
 - e - empty
 
-The objects are:
+The kinds are:
 
 - a - array
 - o - object
@@ -212,3 +215,8 @@ instance:
 
     > qj co wow  ec bang cc
     "wow!"
+
+## Limitations
+
+- Consumes whole input before starting - shouldn't be an issue as you're
+  not converting gigabytes of JSON to JQ (right?!).

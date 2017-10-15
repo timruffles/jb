@@ -21,6 +21,7 @@ static int argc;
 typedef char OperatorLiteral[3];
 
 static const char INPUT_TOO_LARGE[] = "Input too large";
+void bug(bool, const char*);
 
 //// Take the next N characters. Will update TakeResult with
 //// flags
@@ -39,19 +40,83 @@ static const char INPUT_TOO_LARGE[] = "Input too large";
 //
 char* stringJoin(uint8_t count, char* strings[]);
 
-int main(int argc_, char* argv_[]) {
-  char* input = stringJoin(argc_, argv_);
-  puts(input);
-  regex_t result;
-  regmatch_t operatorMatch[1];
-  uint8_t matchCount = 1;
-  if(regexec(&result, input, matchCount,
-        operatorMatch, REG_EXTENDED | REG_ICASE)) {
+void output(char* string) {
+  puts(string);
+}
+
+void outputc(char* string) {
+  puts(string);
+}
+
+char OPERATOR_RE[] = "([oasc])([oce])( |$)";
+
+enum PairKind {
+    ObjectPair,
+    ArrayPair,
+    StringPair,
+    ConcatPair
+};
+
+enum PairAction {
+  OpenPair,
+  ClosePair,
+  EmptyPair
+};
+
+static const char OBJECT_NESTING_INVALID[] = "Your object nesting is invalid";
+
+void objectKind(enum PairAction action) {
+  static uintmax_t nesting = 0;
+  switch(action) {
+    case OpenPair:
+      nesting += 1;
+      output("{");
+      break;
+    case ClosePair:
+      if(nesting > 0) {
+        nesting -= 1;
+        output("}");
+      } else {
+        fputs(OBJECT_NESTING_INVALID, stderr);
+        exit(1);
+      }
+      return;
+    case EmptyPair:
+      // TODO - should probably figure out if we're in an appropriate
+      // context somehow - though this could be handled 'for free' if using
+      // a recursive decent parser
+      output("{}");
   }
 }
 
+int main(int argc_, char* argv_[]) {
+  // TODO - support stdin
+  // ignore argv[0] - program name
+  char* input = stringJoin(argc_ - 1, &argv_[1]);
+  puts(input);
+  regex_t operatorRe;
+  regmatch_t operatorMatch[1];
+  bug(!regcomp(&operatorRe, OPERATOR_RE, REG_EXTENDED | REG_ICASE), "One of the language regexps could not be compiled");
+  uint8_t matchCount = 1;
+  if(regexec(&operatorRe, input, matchCount,
+        operatorMatch, REG_EXTENDED | REG_ICASE)) {
+    printf("operator '%.1s'", &input[operatorMatch[0].rm_so]);
+    // NEXT - parse regexp match to pair kind + action, and pass to approprate operator 
+  }
+}
+
+
 void assert(bool t, const char* msg) {
   if(!t) {
+    fputs(msg, stderr);
+    exit(1);
+  }
+}
+
+// something that only happens if I screwed up
+void bug(bool t, const char* msg) {
+  if(!t) {
+    fputs("Sorry, a programming error occured:", stderr);
     fputs(msg, stderr);
     exit(1);
   }
@@ -111,9 +176,6 @@ bool isOp(char a, char b, OperatorLiteral op) {
   return a == op[0] && b == op[1];
 }
 
-void output(char* string) {
-  puts(string);
-}
 
 void objectEmpty() {
   output("{}");
