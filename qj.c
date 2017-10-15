@@ -6,38 +6,20 @@
 # include <string.h>
 
 # define EOS '\0'
+// variables are initialized to 0
+# define UNINITIALIZED 0;
+# define callocOne(A) calloc(1, A);
 
-static char SEPARATOR = ' ';
 
-static int (*nextChar)();
-static void pickInput();
-static int nextCharArgc();
-static void runOperator();
+static char* input;
 
-// a pointer to argv, which is an array of pointers to chars
-static char **argv;
-static int argc;
 
 typedef char OperatorLiteral[3];
+char OPERATOR_RE[] = "([oasc])([oce])( |$)";
 
 static const char INPUT_TOO_LARGE[] = "Input too large";
 void bug(bool, const char*);
 
-//// Take the next N characters. Will update TakeResult with
-//// flags
-//struct TakeResultT {
-//  // was the request filled completely?
-//  bool filled,
-//  // how many taken
-//  uint8_t n
-//} TakeResult;
-//
-//char* take(uint8_t n) {
-//}
-//
-//char* takeExact(char* string) {
-//}
-//
 char* stringJoin(uint8_t count, char* strings[]);
 
 void output(char* string) {
@@ -48,31 +30,74 @@ void outputc(char* string) {
   puts(string);
 }
 
-char OPERATOR_RE[] = "([oasc])([oce])( |$)";
+void assert(bool t, const char* msg) {
+  if(!t) {
+    fputs(msg, stderr);
+    exit(1);
+  }
+}
 
-enum PairKind {
+/**
+ * Object pair constants
+ */
+enum ObjectKind {
+    ObjectPairKind = 'o',
+};
+
+/**
+ * Action constants
+ */
+enum ActionKind {
+    OpenAction = 'o',
+    CloseAction = 'c',
+    EmptyAction = 'e'
+};
+
+enum ExpressionKind {
+    EscapeToken,
+    StringLiteral,
+    NumericLiteral,
+    BooleanLiteral,
+    NullLiteral,
     ObjectPair,
     ArrayPair,
     StringPair,
     ConcatPair
 };
 
-enum PairAction {
-  OpenPair,
-  ClosePair,
-  EmptyPair
+struct ObjectPairExpression {
+  enum ExpressionKind kind;
+  union Expression* pairs[];
 };
+
+
+/**
+ * Expressions are the building-blocks of the language, and
+ * each evaluates to a value.
+ */
+union Expression {
+  enum ExpressionKind kind;
+};
+
+
 
 static const char OBJECT_NESTING_INVALID[] = "Your object nesting is invalid";
 
-void objectKind(enum PairAction action) {
+
+void objectEmpty() {
+  output("{}");
+}
+
+typedef union Expression* ParseResult;
+
+static struct ObjectPairExpression* objectPairParse(enum ActionKind action, ParseResult result) {
   static uintmax_t nesting = 0;
   switch(action) {
-    case OpenPair:
+    case OpenAction:
       nesting += 1;
       output("{");
       break;
-    case ClosePair:
+    case CloseAction:
       if(nesting > 0) {
         nesting -= 1;
         output("}");
@@ -81,7 +106,7 @@ void objectKind(enum PairAction action) {
         exit(1);
       }
       return;
-    case EmptyPair:
+    case EmptyAction:
       // TODO - should probably figure out if we're in an appropriate
       // context somehow - though this could be handled 'for free' if using
       // a recursive decent parser
@@ -89,29 +114,53 @@ void objectKind(enum PairAction action) {
   }
 }
 
-int main(int argc_, char* argv_[]) {
-  // TODO - support stdin
-  // ignore argv[0] - program name
-  char* input = stringJoin(argc_ - 1, &argv_[1]);
-  puts(input);
-  regex_t operatorRe;
+
+static ParseResult pairParse(ParseResult result) {
+  static bool compiled = false;
+  static regex_t operatorRe;
+  // compile the regexp only once
+  if(!compiled) {
+    bug(!regcomp(&operatorRe, OPERATOR_RE, REG_EXTENDED | REG_ICASE), "One of the language regexps could not be compiled");
+    compiled = true;
+  }
+
   regmatch_t operatorMatch[1];
-  bug(!regcomp(&operatorRe, OPERATOR_RE, REG_EXTENDED | REG_ICASE), "One of the language regexps could not be compiled");
   uint8_t matchCount = 1;
   if(regexec(&operatorRe, input, matchCount,
         operatorMatch, REG_EXTENDED | REG_ICASE)) {
-    printf("operator '%.1s'", &input[operatorMatch[0].rm_so]);
-    // NEXT - parse regexp match to pair kind + action, and pass to approprate operator 
+    const enum ObjectCharacter kind = input[operatorMatch[0].rm_so];
+    const enum ActionCharacter action = input[operatorMatch[1].rm_so];
+    switch(kind) {
+      case ObjectPairKindCharacter:
+        return objectPairParse(action, result);
+    }
   }
+
+  return NULL;
+}
+
+static ParseResult expressionParse() {
+  ParseResult expression = callocOne(sizeof (union Expression));
+
+  if((expression = pairParse(expression)) != NULL) {
+    return expression;
+  }
+
+  return NULL;
 }
 
 
-void assert(bool t, const char* msg) {
-  if(!t) {
-    fputs(msg, stderr);
-    exit(1);
-  }
+
+int main(int argc_, char* argv_[]) {
+  // TODO - support stdin
+  // ignore argv[0] - program name
+  input = stringJoin(argc_ - 1, &argv_[1]);
+  puts(input);
+
+  assert(expressionParse() == NULL, "Failed to parse");
 }
+
+
 
 // something that only happens if I screwed up
 void bug(bool t, const char* msg) {
@@ -138,88 +187,4 @@ char* stringJoin(uint8_t n, char* strings[]) {
   return joined;
 }
 
-
-int main2(int argc_, char* argv_[]) {
-  argc = argc_;
-  argv = (char**) argv_;
-  pickInput();
-  printf("address of argv: %p\n", (void*)argv_);
-  // first 
-  printf("value of argv[0]: %c\n", argv_[0][0]);
-
-  // try to read an operator
-  OperatorLiteral operator;
-  char c;
-
-  while(1) {
-    // consume next two letters
-    operator[0] = 0;
-    operator[1] = 0;
-    operator[2] = 0;
-    printf("hi operator %s\n", operator);
-    int consumed = 0;
-    for(consumed = 0; consumed < 3 && ((c = nextChar()) != EOF); consumed++) {
-      operator[consumed] = c;
-    }
-
-    if(operator[0] != SEPARATOR && operator[1] != SEPARATOR && (operator[2] == SEPARATOR || operator[2] == EOF || operator[2] == 0)) {
-      runOperator(operator);
-    } else {
-      printf("not op\n");
-    }
-  }
-
-  return 0;
-}
-
-bool isOp(char a, char b, OperatorLiteral op) {
-  return a == op[0] && b == op[1];
-}
-
-
-void objectEmpty() {
-  output("{}");
-}
-
-void runOperator(OperatorLiteral operator) {
-  if(isOp('o','e',operator)) {
-    objectEmpty();
-    return;
-  }
-  fprintf(stderr, "failed - unknown operator '%s'", operator);
-  exit(1);
-}
-
-// decide where we're reading our source-code from
-void pickInput() {
-  if(argc == 1) {
-    nextChar = getchar;
-  } else {
-    nextChar = nextCharArgc;
-  }
-}
-
-int nextCharArgc() {
-  static int positionArgumentsConsumed = 1;
-  static int currentCharacterIndex = 0;
-
-  printf("nextCharArgc %i %i %i\n", positionArgumentsConsumed, currentCharacterIndex, argc);
-
-  // argc 0 is program, so once we've consumed argc - 1 words we're done
-  if(positionArgumentsConsumed >= argc) {
-    return EOF;
-  }
-
-  // pick the next character from our current argument
-  char *argument = argv[positionArgumentsConsumed];
-  char nextCharacter = argument[currentCharacterIndex];
-  if(nextCharacter == EOS) {
-    positionArgumentsConsumed += 1;
-    currentCharacterIndex = 0;
-    return nextCharArgc();
-  }
-
-  currentCharacterIndex += 1;
-  return nextCharacter;
-}
 
