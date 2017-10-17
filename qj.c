@@ -37,12 +37,7 @@ void assert(bool t, const char* msg) {
   }
 }
 
-/**
- * Object pair constants
- */
-enum ObjectKind {
-    ObjectPairKind = 'o',
-};
+
 
 /**
  * Action constants
@@ -59,10 +54,10 @@ enum ExpressionKind {
     NumericLiteral,
     BooleanLiteral,
     NullLiteral,
-    ObjectPair,
-    ArrayPair,
-    StringPair,
-    ConcatPair
+    ObjectPair = 'o',
+    ArrayPair = 'a',
+    StringPair = 's',
+    ConcatPair = 'c'
 };
 
 struct ObjectPairExpression {
@@ -76,46 +71,72 @@ struct ObjectPairExpression {
  * each evaluates to a value.
  */
 union Expression {
-  enum ExpressionKind kind;
+  struct ObjectPairExpression objectPair;
+
+  // all expression nodes have a Expression as their first member,
+  // and we use this to get
+  struct ObjectPairExpression all;
 };
 
 
 
-static const char OBJECT_NESTING_INVALID[] = "Your object nesting is invalid";
 
+// we pass around nodes as pointers
+typedef union Expression ExpressionNode;
+typedef bool ParseResult;
+
+static ParseResult expressionParse(ExpressionNode* node);
 
 void objectEmpty() {
   output("{}");
 }
 
-typedef union Expression* ParseResult;
 
-static struct ObjectPairExpression* objectPairParse(enum ActionKind action, ParseResult result) {
-  static uintmax_t nesting = 0;
+static enum ExpressionKind getKind(ExpressionNode* node) {
+  // TODO should this guard against null ptrs?
+  return node->all.kind;
+}
+
+static bool isStringNode(ExpressionNode* node) {
+  switch(getKind(node)) {
+    case ObjectPair:
+      return false;
+    default:
+      return true;
+  }
+}
+
+static ParseResult objectPairParse(enum ActionKind action, ExpressionNode* result) {
   switch(action) {
-    case OpenAction:
-      nesting += 1;
-      output("{");
-      break;
-    case CloseAction:
-      if(nesting > 0) {
-        nesting -= 1;
-        output("}");
-      } else {
-        fputs(OBJECT_NESTING_INVALID, stderr);
-        exit(1);
+    // interesting note: as first line in case is an initialization (bool isKey =...)
+    // we need to create a bracket statement to jump to
+    case OpenAction: {
+      bool isKey = true;
+      while(true) {
+        ExpressionNode* next = callocOne(sizeof (ExpressionNode));
+        expressionParse(next);
+        if(isKey && !isStringNode(next)) {
+          return false;
+        }
+
+        // switch between
+        isKey = !isKey;
       }
-      return;
+
+      return true;
+    }
+
+    case CloseAction:
+      // FIXME
+      result = NULL;
+      return false;
     case EmptyAction:
-      // TODO - should probably figure out if we're in an appropriate
-      // context somehow - though this could be handled 'for free' if using
-      // a recursive decent parser
-      output("{}");
+      return false;
   }
 }
 
 
-static ParseResult pairParse(ParseResult result) {
+static ParseResult pairParse(ExpressionNode* result) {
   static bool compiled = false;
   static regex_t operatorRe;
   // compile the regexp only once
@@ -128,25 +149,25 @@ static ParseResult pairParse(ParseResult result) {
   uint8_t matchCount = 1;
   if(regexec(&operatorRe, input, matchCount,
         operatorMatch, REG_EXTENDED | REG_ICASE)) {
-    const enum ObjectCharacter kind = input[operatorMatch[0].rm_so];
-    const enum ActionCharacter action = input[operatorMatch[1].rm_so];
+    const enum ExpressionKind kind = input[operatorMatch[0].rm_so];
+    const enum ActionKind action = input[operatorMatch[1].rm_so];
     switch(kind) {
-      case ObjectPairKindCharacter:
+      case ObjectPair:
         return objectPairParse(action, result);
+      default:
+        return false;
     }
   }
 
-  return NULL;
+  return false;
 }
 
-static ParseResult expressionParse() {
-  ParseResult expression = callocOne(sizeof (union Expression));
-
-  if((expression = pairParse(expression)) != NULL) {
-    return expression;
+static ParseResult expressionParse(ExpressionNode* result) {
+  if(pairParse(result)) {
+    return true;
   }
 
-  return NULL;
+  return false;
 }
 
 
@@ -157,7 +178,8 @@ int main(int argc_, char* argv_[]) {
   input = stringJoin(argc_ - 1, &argv_[1]);
   puts(input);
 
-  assert(expressionParse() == NULL, "Failed to parse");
+  ExpressionNode* expression = callocOne(sizeof (union Expression));
+  assert(expressionParse(expression), "Failed to parse");
 }
 
 
