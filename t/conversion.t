@@ -13,7 +13,18 @@ main() {
 
   expect "empty object operator" "oe" "{}"
   expect "empty object" "oo oc" "{}"
-  expect "single key" "oo oc" "{}"
+  expect "single key" "oo foo bar oc" '{"foo":"bar"}'
+  expect "objects with array, string, number" \
+    "oo  id 10  tags ao 1 2 3 ac  key value  oc" \
+    '{"id":10,"tags":[1,2,3],"key":"value"}'
+  expect "quoting in concats" "co et quote hello there et quote cc" '"\"hello there\""'
+  expect "nested concats" "co oo some co oo json value oc cc oc cc" \
+    '{"some":"{\"json\":\"value\"}"}'
+  expect "deep nesting" "co oo some co oo nested oo json value oc oc cc oc cc" \
+    '{"some":"{\"nested\":\"{\\\"json\\\":\\\"value\\\"}\"}"}'
+
+  expect "concat" "co hi there cc" '"hithere"'
+  expect "concat nesting" "co ao 1 2 3 ac another cc" '"\"[1,2,3]\"another"'
 }
 
 
