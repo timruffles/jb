@@ -5,7 +5,9 @@
 # include<assert.h>
 # include<stdbool.h>
 
-#define callocString(size) calloc(size, sizeof (char));
+// size for string + \0 - if we need a string for "hello", we'd end up
+// with 6 bytes. calloc allocs 0 so after copying it in it's terminated
+#define callocString(size) calloc(size, sizeof (char) + 1);
 
 const char ConcatOpen[] = "co";
 const char ConcatClose[] = "cc";
@@ -25,7 +27,10 @@ struct ConcatOuput {
 // our concat stack
 struct ConcatOuput* currentConcat;
 
+// just output verbatim
 void output(char*);
+// output a JSON string
+void outputString(char*);
 
 char** programTokens;
 int programLength;
@@ -42,11 +47,16 @@ char* getToken() {
     }
 }
 
+struct QuoteResult {
+    int length;
+    char* string;
+};
+
 /* replaces all " with \" and \ with \\ */
-char* quote(char* string) {
+struct QuoteResult quote(char* string) {
     int length = strlen(string);
     // at most, we'll replace every character
-    char* replaced = calloc(length * 2, sizeof (char));
+    char* replaced = callocString(length * 2);
     int o = 0;
     for(int i = 0; i < length; i++) {
         char c = string[i];
@@ -64,7 +74,10 @@ char* quote(char* string) {
     }
     printf("got to %i vs %i '%s'\n", o, length, replaced);
     replaced[o] = '\0';
-    return replaced;
+    return (struct QuoteResult) {
+        .length = length,
+        .string = replaced,
+    };
 }
 
 void concatClose() {
@@ -72,7 +85,8 @@ void concatClose() {
     concatDepth -= 1;
     struct ConcatOuput* co = currentConcat;
     currentConcat = currentConcat->parent;
-    output(co->content);
+    printf("outputting '%s'\n", co->content);
+    outputString(co->content);
     free(co->content);
     free(co);
 }
@@ -92,7 +106,7 @@ void escapeToken() {
     for(uintmax_t i = 0; i < EscapeTokensLength; i+=2) {
         char* et = escapeTokens[i];
         if(strcmp(et, token) == 0) {
-            output(escapeTokens[i + 1]);
+            outputString(escapeTokens[i + 1]);
         }
     }
 }
@@ -111,6 +125,16 @@ void concatOpen() {
         created->parent = currentConcat;
     }
     currentConcat = created;
+}
+
+void outputString(char* string) {
+    struct QuoteResult inner = quote(string);
+    int len = inner.length;
+    char* quoted = callocString(len + 2);
+    strlcpy(&quoted[1], inner.string, len + 1);
+    quoted[0] = quoted[len + 1] = '\"';
+    free(inner.string);
+    output(quoted);
 }
 
 void output(char* string) {
@@ -144,7 +168,7 @@ bool expression() {
         } else if(strcmp(token, EscapeToken) == 0) {
             escapeToken();
         } else {
-            output(token);
+            outputString(token);
         }
         return true;
     }
