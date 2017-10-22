@@ -28,9 +28,7 @@ struct ConcatOuput {
 struct ConcatOuput* currentConcat;
 
 // just output verbatim
-void output(char*);
-// output a JSON string
-void outputString(char*);
+void output(char*, bool);
 
 char** programTokens;
 int programLength;
@@ -85,8 +83,7 @@ void concatClose() {
     concatDepth -= 1;
     struct ConcatOuput* co = currentConcat;
     currentConcat = currentConcat->parent;
-    printf("outputting '%s'\n", co->content);
-    outputString(co->content);
+    output(co->content, false);
     free(co->content);
     free(co);
 }
@@ -106,7 +103,7 @@ void escapeToken() {
     for(uintmax_t i = 0; i < EscapeTokensLength; i+=2) {
         char* et = escapeTokens[i];
         if(strcmp(et, token) == 0) {
-            outputString(escapeTokens[i + 1]);
+            output(escapeTokens[i + 1], false);
         }
     }
 }
@@ -127,21 +124,30 @@ void concatOpen() {
     currentConcat = created;
 }
 
-void outputString(char* string) {
+// output a "jsonString"
+char* jsonString(char* string) {
     struct QuoteResult inner = quote(string);
-    int len = inner.length;
-    char* quoted = callocString(len + 2);
-    strlcpy(&quoted[1], inner.string, len + 1);
-    quoted[0] = quoted[len + 1] = '\"';
-    free(inner.string);
-    output(quoted);
+    char* quoted;
+    assert(asprintf(&quoted, "\"%s\"", inner.string) != -1);
+    return quoted;
 }
 
-void output(char* string) {
+// verbatim - if true, don't transform output
+void output(char* stringValue, bool verbatim) {
+
     if(currentConcat == NULL) {
-        // double size of concat buffer each time
-        puts(string);
+        char* quoted = NULL;
+        char* string = stringValue;
+        if(!verbatim) {
+            quoted = jsonString(stringValue);
+            string = quoted;
+        }
+        printf("%s", string);
+        if(quoted != NULL) {
+            free(quoted);
+        }
     } else {
+        char* string = stringValue;
         int len = strlen(string);
         // ensure we've enough space
         while(currentConcat->length + len >= currentConcat->size - 1) {
@@ -154,6 +160,7 @@ void output(char* string) {
         }
         strncat(currentConcat->content, string, len);
     }
+
 }
 
 bool expression() {
@@ -168,7 +175,7 @@ bool expression() {
         } else if(strcmp(token, EscapeToken) == 0) {
             escapeToken();
         } else {
-            outputString(token);
+            output(token, false);
         }
         return true;
     }
