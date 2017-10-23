@@ -4,10 +4,13 @@ set -uo pipefail
 
 main() {
   count=0
+  cmd=${TEST_CMD:-./qj}
 
   comment CLI smoke test
 
-  expect_code "no args exits ok" 0
+  expect "single key" "oo foo bar oc" '{"foo":"bar"}'
+  expect_code "no args exits ok" '' 0
+  return
 
   comment Object tests
 
@@ -47,7 +50,7 @@ expect() {
   local input=$2
   local expected=$3
 
-  output=$(./qj $input)
+  output=$($cmd $input)
 
   assert_equal "$msg" "$output" "$expected"
 }
@@ -66,11 +69,12 @@ assert_equal() {
 
 expect_code() {
   local msg=$1
-  local expected=$2
+  local input=$2
+  local expected=$3
 
-  op=$(./qj 2>&1 $input)
+  op=$($cmd 2>&1 $input)
 
-  assert_equal "$msg" $? $expected
+  assert_equal "$msg" "$?" $expected
 }
 
 main

@@ -20,6 +20,10 @@ class Concat {
     }
 }
 
+function d(...args) {
+    console.error(...args)
+}
+
 function debug(msg) {
 }
 
@@ -111,22 +115,21 @@ function key() {
         || string();
 }
 
-function pair() {
-    if(!key()) return;
-    output(":");
-    const v = expression();
-    assertSyntaxCorrect(v, "missing pair");
-    if(!take("oc")) {
-        output(",")
-    }
-    return true;
-}
-
 function object() {
     if(!take('oo')) return;
     debug("in object")
     output("{");
-    zeroOrMore(pair);
+    let previous = false;
+    while(true) {
+        if(nextIs("oc")) break;
+        if(previous) output(",");
+        if(!key()) break;
+        output(":");
+        const v = expression();
+        assertSyntaxCorrect(v, "missing pair");
+        previous = true;
+    }
+    assertSyntaxCorrect(take("oc"), "missing object close");
     output("}");
     return true;
 }
@@ -181,6 +184,9 @@ function parse(input) {
 
 function main() {
     const tokens = process.argv.slice(2)
+    if(tokens.length === 0) {
+        return;
+    }
     debug("parsing", tokens)
     parse(tokens);
 }
