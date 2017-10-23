@@ -1,6 +1,7 @@
 "use strict";
 
 let s;
+const NUMBER_RE = /[-+]?(\d+(\.\d+)?|\d+e\d+)/;
 
 class State {
     constructor(tokens) {
@@ -10,13 +11,16 @@ class State {
         this.quoteDepth = 0;
         // if we're concatting, we buffer output till close
         this.concat = null;
+        // is a concat the parent of the current string context?
+        // if so, we don't want to quote stringValues
+        this.isConcatLeaf = false;
     }
 }
 
 class Concat {
     constructor(parent) {
         this.output = [];
-        this.depth = parent ? parent.depth + 1 : 0;
+        this.depth = parent ? parent.depth + 1 : 1;
     }
 }
 
@@ -27,17 +31,8 @@ function d(...args) {
 function debug(msg) {
 }
 
-function output(string) {
-    if(s.concat) {
-        s.concat.push(string);
-    } else {
-        process.stdout.write(string);
-    }
-    return true;
-}
-
-function quote(string, depth) {
-    while(depth--) {
+function concatQuote(string) {
+    for(let depth = s.concat.depth; depth; depth--) {
         string = string
             .replace(/\\/g,"\\")
             .replace(/"/g,'\\"');
@@ -45,9 +40,20 @@ function quote(string, depth) {
     return string;
 }
 
+function output(string) {
+    assert(typeof string === 'string', `got non string '${string}'`);
+    if(s.concat) {
+        s.concat.output.push(concatQuote(string));
+    } else {
+        process.stdout.write(string);
+    }
+    return true;
+}
+
+
 function outputString(string) {
     if(s.concat) {
-        return output(`"${quote(string, s.concat.depth)}"`);
+        return output(`"${concatQuote(string)}"`);
     } else {
         return output(`"${string}"`);
     }
@@ -95,25 +101,53 @@ function zeroOrMore(fn) {
     }
 }
 
+function concatLeafEnter() {
+    s.isConcatLeaf = true;
+}
+function concatLeafExit() {
+    s.isConcatLeaf = false;
+}
 
 function concat() {
-    if(!nextIs('co')) return;
+    if(!take('co')) return;
     const concat = new Concat(s.concat);
     s.concat = concat;
-    zeroOrMore(expression);
+    while(true) {
+        concatLeafEnter();
+        if(take('cc')) break;
+        if(!expression()) break;
+    }
 
     s.concat = concat.parent;
     outputString(concat.output.join(""))
+    concatLeafExit();
     return true;
 }
 
 function key() {
     return unary()
+        || concat()
         || number()
         || primitive()
-        || concat()
         || string();
 }
+
+function array() {
+    if(!take('ao')) return;
+    output("[");
+    let previous = false;
+    while(true) {
+        concatLeafExit();
+        if(nextIs("ac")) break;
+        if(previous) output(",");
+        if(!expression()) break;
+        previous = true;
+    }
+    assertSyntaxCorrect(take("ac"), "missing array close");
+    output("]");
+    return true;
+}
+
 
 function object() {
     if(!take('oo')) return;
@@ -121,6 +155,7 @@ function object() {
     output("{");
     let previous = false;
     while(true) {
+        concatLeafExit();
         if(nextIs("oc")) break;
         if(previous) output(",");
         if(!key()) break;
@@ -135,7 +170,9 @@ function object() {
 }
 
 function paired() {
-    return object();
+    return object()
+        || array()
+        || concat();
 }
 
 function unary() {
@@ -144,7 +181,9 @@ function unary() {
 
 function string() {
     if(peek()) {
-        return outputString(takeOne());
+        return s.isConcatLeaf
+            ? output(takeOne())
+            : outputString(takeOne());
     }
 }
 
@@ -153,7 +192,10 @@ function primitive() {
 }
 
 function number() {
-    return;
+    if(NUMBER_RE.test(peek())) {
+        output(takeOne());
+        return true;
+    }
 }
 
 function operator() {
