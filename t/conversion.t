@@ -6,12 +6,41 @@ main() {
   count=0
   cmd=${TEST_CMD:-./qj}
 
+  smoke_tests
+  object_tests
+  concat_tests
+
+}
+
+smoke_tests() {
   comment CLI smoke test
 
   expect "single key" "oo foo bar oc" '{"foo":"bar"}'
   expect_code "no args exits ok" '' 0
-  return
+}
 
+concat_tests() {
+  comment Concat tests
+
+  expect "concat" "co hi there cc" '"hithere"'
+  expect "concat nesting 1" "co co inside cc cc" '"\"inside\""'
+  expect "concat nesting 2" "co co A cc co B cc cc" '"\"A\"\"B\""'
+
+  expect "quoting in concats" "co et quote hello there et quote cc" '"\"hello there\""'
+
+  expect "nested concats" "co word co foo bar cc another cc" \
+    '"word\"foobar\"another"'
+
+  expect "nested concats and objects" "co oo some co oo json value oc cc oc cc" \
+    '"{\"some\":\"{\\\"json\\\":\\\"value\\\"}\"}"'
+
+  expect "deep nesting" "co oo some co oo nested oo json value oc oc cc oc cc" \
+    '{"some":"{\"nested\":\"{\\\"json\\\":\\\"value\\\"}\"}"}'
+
+  expect "concat json" "co ao 1 2 3 ac another cc" '"[1,2,3]another"'
+}
+
+object_tests() {
   comment Object tests
 
   expect "empty object operator" "oe" "{}"
@@ -20,14 +49,6 @@ main() {
   expect "objects with array, string, number" \
     "oo  id 10  tags ao 1 2 3 ac  key value  oc" \
     '{"id":10,"tags":[1,2,3],"key":"value"}'
-  expect "quoting in concats" "co et quote hello there et quote cc" '"\"hello there\""'
-  expect "nested concats" "co oo some co oo json value oc cc oc cc" \
-    '{"some":"{\"json\":\"value\"}"}'
-  expect "deep nesting" "co oo some co oo nested oo json value oc oc cc oc cc" \
-    '{"some":"{\"nested\":\"{\\\"json\\\":\\\"value\\\"}\"}"}'
-
-  expect "concat" "co hi there cc" '"hithere"'
-  expect "concat nesting" "co ao 1 2 3 ac another cc" '"\"[1,2,3]\"another"'
 }
 
 

@@ -210,11 +210,24 @@ A string literal is a sequence of characters that is > 0, != 2 in length.
 
 ### Concat
 
-Concat allows producing keys and string that contain special characters, for 
-instance:
+Concat has two rules: providing strings containing escape tokens, and
+nesting JSON. Some examples of using escape tokens:
 
-    > qj co wow  ec bang cc
+    > qj co wow et bang cc
     "wow!"
+    > qj co hi there cc
+    "hithere"
+    > qj co hi et space there cc
+    "hi there"
+
+JSON is quoted to form a valid string:
+
+    > qj co oo hi there oc cc
+    "{\"hi\":\"there\"}"
+
+TODO - should nested concats collapse? Not much of a use-case
+TODO - string producing values get consumed by: concats, arrays, top-level, object. Each
+       has a slightly different quoting requirement
 
 ## Limitations
 

@@ -7,13 +7,8 @@ class State {
     constructor(tokens) {
         this.tokens = tokens || [];
         this.index = 0;
-        // how many levels are we inside a nested JSON context?
-        this.quoteDepth = 0;
         // if we're concatting, we buffer output till close
         this.concat = null;
-        // is a concat the parent of the current string context?
-        // if so, we don't want to quote stringValues
-        this.isConcatLeaf = false;
     }
 }
 
@@ -21,6 +16,11 @@ class Concat {
     constructor(parent) {
         this.output = [];
         this.depth = parent ? parent.depth + 1 : 1;
+        this.parent = parent;
+        // concats take the 'string value' (basically the stuff
+        // that would be between "" if output as a JSON string)
+        // for expressions at their root
+        this.atLeaf = true;
     }
 }
 
@@ -32,28 +32,28 @@ function debug(msg) {
 }
 
 function concatQuote(string) {
-    for(let depth = s.concat.depth; depth; depth--) {
-        string = string
-            .replace(/\\/g,"\\")
-            .replace(/"/g,'\\"');
-    }
-    return string;
+    return string
+        .replace(/\\/g,'\\')
+        .replace(/"/g,'\\"');
 }
 
 function output(string) {
     assert(typeof string === 'string', `got non string '${string}'`);
     if(s.concat) {
-        s.concat.output.push(concatQuote(string));
+        s.concat.output.push(string);
     } else {
         process.stdout.write(string);
     }
     return true;
 }
 
-
-function outputString(string) {
-    if(s.concat) {
-        return output(`"${concatQuote(string)}"`);
+function outputString(string, { fromConcat = false } = {}) {
+    if(atConcatLeaf()) {
+        if(fromConcat) {
+            return output(concatQuote(`"${string}"`));
+        } else {
+            return output(string);
+        }
     } else {
         return output(`"${string}"`);
     }
@@ -101,14 +101,26 @@ function zeroOrMore(fn) {
     }
 }
 
+function atConcatLeaf() {
+    return Boolean(s.concat && s.concat.atLeaf);
+}
+
 function concatLeafEnter() {
-    s.isConcatLeaf = true;
+    if(s.concat) {
+        s.concat.atLeaf = true;
+    }
 }
 function concatLeafExit() {
-    s.isConcatLeaf = false;
+    if(s.concat) {
+        s.concat.atLeaf = false;
+    }
 }
 
 function concat() {
+    if(take('ce')) {
+        outputString('')
+        return true;
+    }
     if(!take('co')) return;
     const concat = new Concat(s.concat);
     s.concat = concat;
@@ -118,21 +130,24 @@ function concat() {
         if(!expression()) break;
     }
 
+    // restore output context
     s.concat = concat.parent;
-    outputString(concat.output.join(""))
-    concatLeafExit();
+    outputString(concat.output.join(''), { fromConcat: true });
     return true;
 }
 
 function key() {
-    return unary()
-        || concat()
+    return concat()
         || number()
         || primitive()
         || string();
 }
 
 function array() {
+    if(take('ae')) {
+        output('[]')
+        return true;
+    }
     if(!take('ao')) return;
     output("[");
     let previous = false;
@@ -150,6 +165,10 @@ function array() {
 
 
 function object() {
+    if(take('oe')) {
+        output('{}')
+        return true;
+    }
     if(!take('oo')) return;
     debug("in object")
     output("{");
@@ -176,14 +195,55 @@ function paired() {
 }
 
 function unary() {
-    return false;
+    if(!take('et')) return;
+    const target = takeOne();
+    outputString((() => {
+        switch(target) {
+            case "quote":
+            case "dquote":
+                return '"';
+            case "squote":
+                return "'";
+            case "nl":
+            case "newline":
+                return "\n";
+            case "dollar":
+                return "$";
+            case "bang":
+            case "exclamation":
+                return "!";
+            case "question":
+                return "?"
+            case "gt":
+                return ">";
+            case "lt":
+                return "<";
+            case "equal":
+                return "=";
+            case "pipe":
+                return "|";
+            case "and":
+                return "&";
+            case "plus":
+                return "+";
+            case "minus":
+                return "-";
+            case "underscore":
+                return "_";
+            case "hash":
+                return "#";
+            case "at":
+                return "@";
+            default:
+                throw Error(`invalid escape character '${target}'`)
+        }
+    })())
+    return true;
 }
 
 function string() {
     if(peek()) {
-        return s.isConcatLeaf
-            ? output(takeOne())
-            : outputString(takeOne());
+        return outputString(takeOne());
     }
 }
 
@@ -222,6 +282,9 @@ function parse(input) {
         bail("Unparsable input")
     }
     const tail = expression();
+    if(tail) {
+        bail("Tail code");
+    }
 }
 
 function main() {
