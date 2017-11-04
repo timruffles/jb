@@ -27,13 +27,12 @@ class Concat {
 function d(...args) {
     console.error(...args)
 }
-
-function debug(msg) {
+function debug() {
 }
 
 function concatQuote(string) {
     return string
-        .replace(/\\/g,'\\')
+        .replace(/\\/g,'\\\\')
         .replace(/"/g,'\\"');
 }
 
@@ -49,11 +48,7 @@ function output(string) {
 
 function outputString(string, { fromConcat = false } = {}) {
     if(atConcatLeaf()) {
-        if(fromConcat) {
-            return output(concatQuote(`"${string}"`));
-        } else {
-            return output(string);
-        }
+        return output(string);
     } else {
         return output(`"${string}"`);
     }
@@ -132,7 +127,7 @@ function concat() {
 
     // restore output context
     s.concat = concat.parent;
-    outputString(concat.output.join(''), { fromConcat: true });
+    output(`"${concatQuote(concat.output.join(''))}"`);
     return true;
 }
 

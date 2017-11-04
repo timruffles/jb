@@ -6,8 +6,8 @@ main() {
   count=0
   cmd=${TEST_CMD:-./qj}
 
-  smoke_tests
-  object_tests
+  #smoke_tests
+  #object_tests
   concat_tests
 
 }
@@ -26,7 +26,7 @@ concat_tests() {
   expect "concat nesting 1" "co co inside cc cc" '"\"inside\""'
   expect "concat nesting 2" "co co A cc co B cc cc" '"\"A\"\"B\""'
 
-  expect "quoting in concats" "co et quote hello there et quote cc" '"\"hello there\""'
+  expect "quoting in concats" "co et quote hello there et quote cc" '"\"hellothere\""'
 
   expect "nested concats" "co word co foo bar cc another cc" \
     '"word\"foobar\"another"'
@@ -35,7 +35,11 @@ concat_tests() {
     '"{\"some\":\"{\\\"json\\\":\\\"value\\\"}\"}"'
 
   expect "deep nesting" "co oo some co oo nested oo json value oc oc cc oc cc" \
-    '{"some":"{\"nested\":\"{\\\"json\\\":\\\"value\\\"}\"}"}'
+    '"{\"some\":\"{\\\"nested\\\":{\\\"json\\\":\\\"value\\\"}}\"}"'
+
+  op=$($cmd 2>&1 co oo some co oo nested oo json value oc oc cc oc cc)
+  read=$(node -p 'JSON.parse(JSON.parse('$op').some).nested.json')
+  assert_equal "serialized correctly" "$read" "value"
 
   expect "concat json" "co ao 1 2 3 ac another cc" '"[1,2,3]another"'
 }
