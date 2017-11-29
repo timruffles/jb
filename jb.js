@@ -204,9 +204,15 @@ function unary() {
                 return "\n";
             case "dollar":
                 return "$";
+            case "space":
+                return " ";
+            case "tab":
+                return "\t";
             case "bang":
             case "exclamation":
                 return "!";
+            case "bang":
+            case "exclamation":
             case "question":
                 return "?"
             case "gt":

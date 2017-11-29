@@ -6,8 +6,8 @@ main() {
   count=0
   cmd=${TEST_CMD:-./qj}
 
-  #smoke_tests
-  #object_tests
+  smoke_tests
+  object_tests
   concat_tests
 
 }
@@ -17,6 +17,9 @@ smoke_tests() {
 
   expect "single key" "oo foo bar oc" '{"foo":"bar"}'
   expect_code "no args exits ok" '' 0
+  expect "html demo" \
+    "oo html co et lt img et space src= et quote things et quote et gt cc oc" \
+    '{"html":"<img src=\"things\">"}'
 }
 
 concat_tests() {
