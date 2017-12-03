@@ -5,7 +5,6 @@
 ```sh
 jb oo key1 value1 key2 $value oc
 jb oo key co Write  anything  here cc bang cc oc
-jb -c < echo '{"key1":"value1","key2":"'$value'"}'
 ```
 
 ## DESCRIPTION
@@ -15,19 +14,19 @@ characters - to JSON. It's designed for use when it is necessary to embed JSON
 in another language - for instance, writing JSON in Bourne shell which is itself
 wrapped inside a JSON config file:
 
-  {
-    "test": "browsers=$(jb oo browserName $BROWSER) ./test",
-  }
+    {
+      "test": "browsers=$(jb oo browserName $BROWSER) ./test",
+    }
 
 instead of quite hard-to-read (and tricky to debug) constructions like:
 
-  {
-    "test":"browsers='{"browserName":"'$BROWSER'"}' ./test",
-  }
+    {
+      "test":"browsers='{"browserName":"'$BROWSER'"}' ./test",
+    }
 
-  {
-    "test":"browsers=\"{\"browserName\":\"$BROWSER\"}\" ./test",
-  }
+    {
+      "test":"browsers=\"{\"browserName\":\"$BROWSER\"}\" ./test",
+    }
 
 Surprisingly, though it would seem verbose at first glance, jb can often
 be shorter than the equivalent JSON it produces
@@ -35,6 +34,7 @@ be shorter than the equivalent JSON it produces
     oo name jb version 1.2 tags ao language cli ac oc
 
     {"name":"jb","version":1.2,"tags":["cli","language"]}
+
 
 
 ## EXAMPLES
@@ -81,6 +81,7 @@ So:
 
     > jb ao oo so jb is a so so language sc ae oc ac
     [{"jb is a so so language":[]}]
+
 
 ## LANGUAGE
 
@@ -178,6 +179,7 @@ Named special characters:
 
 - lessthan | lt: <
 - greatherthan | gt: >
+
 
 #### Unicode token - ut
 
