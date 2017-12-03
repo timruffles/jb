@@ -1,0 +1,25 @@
+{
+  "name": "jb-cli",
+  "version": "0.0.1",
+  "description": "CLI for the JSON Builder language.",
+  "main": "jb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "jb.js"
+  ],
+  "bin": {
+    "jb": "./jb.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timruffles/jb.git"
+  },
+  "author": "Tim Ruffles <timruffles@gmail.com>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/timruffles/jb/issues"
+  },
+  "homepage": "https://github.com/timruffles/jb#readme"
+}

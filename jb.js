@@ -1,7 +1,15 @@
+#!/usr/bin/env node
 "use strict";
 
 let s;
 const NUMBER_RE = /^[-+]?(\d+(\.\d+)?|\d+e\d+)$/;
+
+const USAGE = `
+Usage: jb [ program text]
+
+  Run 'npm help jb' to see the full README, including language
+  definition.
+`;
 
 class State {
     constructor(tokens) {
@@ -307,6 +315,7 @@ function parse(input) {
 function main() {
     const tokens = process.argv.slice(2)
     if(tokens.length === 0) {
+        console.log(USAGE);
         return;
     }
     debug("parsing", tokens)
