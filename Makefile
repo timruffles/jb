@@ -11,6 +11,10 @@ PHONY: test
 test: qj
 	clear && prove -v t/conversion.t
 
+PHONY: test-reference
+test-reference:
+	clear && TEST_CMD="node jb.js" prove -v t/conversion.t
+
 PHONY: smoke-test
 smoke-test: qj
 	./qj oe  

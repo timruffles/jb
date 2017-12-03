@@ -74,7 +74,8 @@ function nextIs(value) {
 
 function assert(t, msg) {
     if(!t) {
-        throw Error(msg);
+      console.error(msg);
+      process.exit(1);
     }
 }
 

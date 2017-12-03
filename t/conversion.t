@@ -1,5 +1,7 @@
 #!/bin/bash
 
+GREP=${GREP:-}
+
 set -uo pipefail
 
 main() {
@@ -9,11 +11,12 @@ main() {
   smoke_tests
   object_tests
   concat_tests
+  edge_case_tests
 
 }
 
 smoke_tests() {
-  comment CLI smoke test
+  comment "CLI smoke test"
 
   expect "single key" "oo foo bar oc" '{"foo":"bar"}'
   expect_code "no args exits ok" '' 0
@@ -23,7 +26,7 @@ smoke_tests() {
 }
 
 concat_tests() {
-  comment Concat tests
+  comment "Concat tests"
 
   expect "concat" "co hi there cc" '"hithere"'
   expect "concat nesting 1" "co co inside cc cc" '"\"inside\""'
@@ -48,7 +51,7 @@ concat_tests() {
 }
 
 object_tests() {
-  comment Object tests
+  comment "Object tests"
 
   expect "empty object operator" "oe" "{}"
   expect "empty object" "oo oc" "{}"
@@ -56,6 +59,29 @@ object_tests() {
   expect "objects with array, string, number" \
     "oo  id 10  tags ao 1 2 3 ac  key value  oc" \
     '{"id":10,"tags":[1,2,3],"key":"value"}'
+
+  expect_error "unclosed" 'oo' "unclosed object"
+  expect_error "unopened" 'oc' "closing unclosed object"
+  expect_error "unbalanced" 'oo key oo oc' "unclosed object"
+}
+
+edge_case_tests() {
+  comment "Edge-case tests"
+
+  expect "numeric literal" "1" "1"
+  expect "float literal" "1.0" "1.0"
+  expect "negative number" "-1" "-1"
+  expect "large number" "17000342" "17000342"
+  expect "small number" "0.0002001" "0.0002001"
+
+  expect "single word" "hello" '"hello"'
+  expect "empty" "" ''
+  expect "whitespace" "               " ''
+
+  expect_error "multiple strings" 'hi there' "invalid input"
+
+  local tab=$'\t'
+  expect "tabs only - should be empty" "$tab$tab" ''
 }
 
 
@@ -73,16 +99,6 @@ pass() {
   echo "ok $count" $@
 }
 
-expect() {
-  local msg=$1
-  local input=$2
-  local expected=$3
-
-  output=$($cmd $input)
-
-  assert_equal "$msg" "$output" "$expected"
-}
-
 assert_equal() {
   local msg=$1
   local actual=$2
@@ -95,14 +111,64 @@ assert_equal() {
   fi
 }
 
+expect() {
+  local msg=$1
+  local input=$2
+  local expected=$3
+
+  if ! should_run "$msg"; then
+    return
+  fi
+
+  output=$($cmd $input)
+  if [[ $? != 0 ]]; then
+    fail "${msg}: '${input}' caused an error, with output '${output}'"
+  fi
+
+  assert_equal "$msg" "$output" "$expected"
+}
+
+expect_error() {
+  local msg=$1
+  local input=$2
+  local error_expected=$3
+
+  if ! should_run "$msg"; then
+    return
+  fi
+
+  output=$($cmd $input)
+  if [[ $? == 0 ]]; then
+    fail "${msg}: expected '${input}' to cause an error, but no exit code occured. Instead got '${output}'"
+  fi
+
+  assert_equal "$msg" "$output" "$error_expected"
+}
+
 expect_code() {
   local msg=$1
   local input=$2
   local expected=$3
 
+
+  if ! should_run "$msg"; then
+    return
+  fi
+
   op=$($cmd 2>&1 $input)
 
   assert_equal "$msg" "$?" $expected
+}
+
+should_run() {
+  local test_name=$1
+
+  # if empty, or matches
+  if [[ -z $GREP ]] || [[ "$test_name" =~ "$GREP" ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 main
