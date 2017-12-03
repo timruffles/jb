@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```sh
+> jb oo name jb version 1.2 tags ao language cli ac oc
+{"name":"jb","version":1.2,"tags":["language","cli"]}
 > export value=hi
 > jb oo key1 value1 key2 $value oc
 {"key1":"value1","key2":"hi"}
-> jb oo name jb version 1.2 tags ao language cli ac oc
-{"name":"jb","version":1.2,"tags":["language","cli"]}
 ```
 
 ## DESCRIPTION
