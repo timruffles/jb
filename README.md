@@ -2,9 +2,11 @@
 
 ## SYNOPSIS
 
+```sh
 jb oo key1 value1 key2 $value oc
 jb oo key co Write  anything  here cc bang cc oc
 jb -c < echo '{"key1":"value1","key2":"'$value'"}'
+```
 
 ## DESCRIPTION
 
