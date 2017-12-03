@@ -308,7 +308,7 @@ function parse(input) {
     }
     const tail = expression();
     if(tail) {
-        bail("Invalid input - should evaluation to a single JSON value");
+        bail("Invalid input - should evaluate to a single JSON value");
     }
 }
 
