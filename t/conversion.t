@@ -82,6 +82,11 @@ object_tests() {
     "oo  id 10  tags ao 1 2 3 ac  key value  oc" \
     '{"id":10,"tags":[1,2,3],"key":"value"}'
 
+
+  expect "key formatting" \
+    "oo key value key2 oo oc oc" \
+    '{"key":"value","key2":{}}'
+
   expect_error "unclosed" 'oo' "missing object close"
   expect_error "unopened" 'oc' "no open object"
   expect_error "unbalanced" 'oo key oo oc' "missing object close"

@@ -1,7 +1,7 @@
 "use strict";
 
 let s;
-const NUMBER_RE = /[-+]?(\d+(\.\d+)?|\d+e\d+)/;
+const NUMBER_RE = /^[-+]?(\d+(\.\d+)?|\d+e\d+)$/;
 
 class State {
     constructor(tokens) {
@@ -46,7 +46,7 @@ function output(string) {
     return true;
 }
 
-function outputString(string, { fromConcat = false } = {}) {
+function outputString(string) {
     if(atConcatLeaf()) {
         return output(string);
     } else {
