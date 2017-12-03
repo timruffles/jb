@@ -117,14 +117,23 @@ function concat() {
         outputString('')
         return true;
     }
-    if(!take('co')) return;
+    if(!take('co')) {
+      assertSyntaxCorrect(!nextIs("cc"), "no open concat");
+      return;
+    }
     const concat = new Concat(s.concat);
     s.concat = concat;
+    let closed = false;
     while(true) {
         concatLeafEnter();
-        if(take('cc')) break;
+        if(take('cc')) {
+          closed = true;
+          break;
+        }
         if(!expression()) break;
     }
+
+    assertSyntaxCorrect(closed, "missing concat close");
 
     // restore output context
     s.concat = concat.parent;
@@ -144,7 +153,10 @@ function array() {
         output('[]')
         return true;
     }
-    if(!take('ao')) return;
+    if(!take('ao')) {
+      assertSyntaxCorrect(!nextIs("ac"), "no open array");
+      return;
+    }
     output("[");
     let previous = false;
     while(true) {

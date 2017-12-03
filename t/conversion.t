@@ -15,6 +15,7 @@ main() {
   smoke_tests
   object_tests
   concat_tests
+  array_tests
   edge_case_tests
 
 }
@@ -36,6 +37,10 @@ concat_tests() {
   expect "concat nesting 1" "co co inside cc cc" '"\"inside\""'
   expect "concat nesting 2" "co co A cc co B cc cc" '"\"A\"\"B\""'
 
+  expect_error "unclosed" 'co' "missing concat close"
+  expect_error "unopened" 'cc' "no open concat"
+  expect_error "unbalanced" 'co value co cc' "missing concat close"
+
   expect "quoting in concats" "co et quote hello there et quote cc" '"\"hellothere\""'
 
   expect "nested concats" "co word co foo bar cc another cc" \
@@ -52,6 +57,19 @@ concat_tests() {
   assert_equal "serialized correctly" "$read" "value"
 
   expect "concat json" "co ao 1 2 3 ac another cc" '"[1,2,3]another"'
+}
+
+array_tests() {
+  comment "Array tests"
+
+  expect "empty array" "ao ac" "[]"
+  expect "item" "ao hi ac" '["hi"]'
+  expect "nesting" "ao ao ao ac hi ac ac" '[[[],"hi"]]'
+  expect "mixed" "ao 1 ao hello ac 2 fun ac" '[1,["hello"],2,"fun"]'
+
+  expect_error "unclosed" 'ao' "missing array close"
+  expect_error "unopened" 'ac' "no open array"
+  expect_error "unbalanced" 'ao value ao ac' "missing array close"
 }
 
 object_tests() {
@@ -147,6 +165,7 @@ expect_error() {
   output=$($cmd 2>$STDERR_FILE $input )
   if [[ $? == 0 ]]; then
     fail "${msg}: expected '${input}' to cause an error, but no exit code occured. Instead got '${output}'"
+    return
   fi
 
   assert_equal "$msg" "$(cat $STDERR_FILE)" "$error_expected"
