@@ -165,7 +165,10 @@ function object() {
         output('{}')
         return true;
     }
-    if(!take('oo')) return;
+    if(!take('oo')) {
+      assertSyntaxCorrect(!nextIs("oc"), "no open object");
+      return;
+    }
     debug("in object")
     output("{");
     let previous = false;
@@ -285,7 +288,7 @@ function parse(input) {
     }
     const tail = expression();
     if(tail) {
-        bail("Tail code");
+        bail("Invalid input - should evaluation to a single JSON value");
     }
 }
 

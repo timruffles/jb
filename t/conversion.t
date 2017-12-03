@@ -2,11 +2,15 @@
 
 GREP=${GREP:-}
 
+STDERR_FILE=''
+
 set -uo pipefail
 
 main() {
   count=0
   cmd=${TEST_CMD:-./qj}
+
+  STDERR_FILE=$(mktemp)
 
   smoke_tests
   object_tests
@@ -60,9 +64,9 @@ object_tests() {
     "oo  id 10  tags ao 1 2 3 ac  key value  oc" \
     '{"id":10,"tags":[1,2,3],"key":"value"}'
 
-  expect_error "unclosed" 'oo' "unclosed object"
-  expect_error "unopened" 'oc' "closing unclosed object"
-  expect_error "unbalanced" 'oo key oo oc' "unclosed object"
+  expect_error "unclosed" 'oo' "missing object close"
+  expect_error "unopened" 'oc' "no open object"
+  expect_error "unbalanced" 'oo key oo oc' "missing object close"
 }
 
 edge_case_tests() {
@@ -78,7 +82,7 @@ edge_case_tests() {
   expect "empty" "" ''
   expect "whitespace" "               " ''
 
-  expect_error "multiple strings" 'hi there' "invalid input"
+  expect_error "multiple strings" 'hi there' "Invalid input - should evaluation to a single JSON value"
 
   local tab=$'\t'
   expect "tabs only - should be empty" "$tab$tab" ''
@@ -120,9 +124,12 @@ expect() {
     return
   fi
 
-  output=$($cmd $input)
+  output=$($cmd 2>$STDERR_FILE $input )
   if [[ $? != 0 ]]; then
     fail "${msg}: '${input}' caused an error, with output '${output}'"
+  fi
+  if [[ -s $STDERR_FILE ]]; then
+    fail "${msg}: '${input}' unexpectly wrote to stderr, with '$(cat $STDERR_FILE)'"
   fi
 
   assert_equal "$msg" "$output" "$expected"
@@ -137,12 +144,12 @@ expect_error() {
     return
   fi
 
-  output=$($cmd $input)
+  output=$($cmd 2>$STDERR_FILE $input )
   if [[ $? == 0 ]]; then
     fail "${msg}: expected '${input}' to cause an error, but no exit code occured. Instead got '${output}'"
   fi
 
-  assert_equal "$msg" "$output" "$error_expected"
+  assert_equal "$msg" "$(cat $STDERR_FILE)" "$error_expected"
 }
 
 expect_code() {
