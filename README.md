@@ -1,20 +1,20 @@
-# qj(1) -- a friendly way to author JSON in the CLI
+# jb(1) -- a friendly way to author JSON in the CLI
 
 ## SYNOPSIS
 
-qj oo key1 value1 key2 $value oc
-qj oo key co Write  anything  here cc bang cc oc
-qj -c < echo '{"key1":"value1","key2":"'$value'"}'
+jb oo key1 value1 key2 $value oc
+jb oo key co Write  anything  here cc bang cc oc
+jb -c < echo '{"key1":"value1","key2":"'$value'"}'
 
 ## DESCRIPTION
 
-**qj** converts to and from the qj language - which contains no special 
+**jb** converts to and from the jb language - which contains no special 
 characters - to JSON. It's designed for use when it is necessary to embed JSON
 in another language - for instance, writing JSON in Bourne shell which is itself
 wrapped inside a JSON config file:
 
   {
-    "test": "browsers=$(qj oo browserName $BROWSER) ./test",
+    "test": "browsers=$(jb oo browserName $BROWSER) ./test",
   }
 
 instead of quite hard-to-read (and tricky to debug) constructions like:
@@ -27,38 +27,32 @@ instead of quite hard-to-read (and tricky to debug) constructions like:
     "test":"browsers=\"{\"browserName\":\"$BROWSER\"}\" ./test",
   }
 
-Surprisingly, though it would seem verbose at first glance, qj can often
+Surprisingly, though it would seem verbose at first glance, jb can often
 be shorter than the equivalent JSON it produces
 
-    oo name qj version 1.2 tags ao language cli ac oc
+    oo name jb version 1.2 tags ao language cli ac oc
 
-    {"name":"qj","version":1.2,"tags":["cli","language"]}
-
-You can capitalise the operators if you like, and leave off object closers
-to have them automatically close in reverse order at the end of the text
-
-    > qj OO name qj version 1.2 tags AO language cli
-    {"name":"qj","version":1.2,"tags":["cli","language"]}
+    {"name":"jb","version":1.2,"tags":["cli","language"]}
 
 
 ## EXAMPLES
 
-Since no special characters are used within qj, it makes it easy to
-construct qj source code programatically. For instance, within shell code:
+Since no special characters are used within jb, it makes it easy to
+construct jb source code programatically. For instance, within shell code:
 
-    > qj oo message so $(qj oo nesting so $(qj oo is easy oc) sc oc) sc oc
+    > jb oo message so $(jb oo nesting so $(jb oo is easy oc) sc oc) sc oc
     {"message":"{\"nesting\":\"{\\\"is\\\":\\\"easy\\\"}\"}"}
 
     > export A=variables 
     > export B=ever
-    > qj ao use $A how${B} you like ac
+    > jb ao use $A how${B} you like ac
     ["use","variables","however","you","like"]
 
-qj's operators are all two character codes, followed by a space.
+jb's operators are all two character codes, followed by a space.
 
 ### Paired operators
 
-Operators determine how qj interprets characters that follow them.
+Operators determine how jb interprets characters that follow them.
 They follow a naming scheme, e.g 'sc'
 
     s                c
@@ -83,8 +77,8 @@ The kinds are:
 
 So:
 
-    > qj ao oo so qj is a so so language sc ae oc ac
-    [{"qj is a so so language":[]}]
+    > jb ao oo so jb is a so so language sc ae oc ac
+    [{"jb is a so so language":[]}]
 
 ## LANGUAGE
 
@@ -96,7 +90,7 @@ So:
 
 ### Operation
 
-A qj program is a sequence of expressions. Expressions are either literals, in
+A jb program is a sequence of expressions. Expressions are either literals, in
 the case of booleans, numbers, and strings, or operators. Operators are two characters
 long, follow by a space, followed by their arguments. Each operators can interpret its
 arguments in a different way, in general though a single space separates arguments.
@@ -108,15 +102,15 @@ arguments in a different way, in general though a single space separates argumen
 The string operator consumes all characters until the (case insensitive) characters ' sc'
 are encountered.
 
-    > qj SO this is all, like, so verbatim right? SC
+    > jb SO this is all, like, so verbatim right? SC
     "this is all, like, so verbatim right?"
 
 This operator is useful for any multi-word strings, and for embedding special characters
-valid in the context qj is being written. To attempt to avoid syntax conflicts in any 
-embedding context, qj's syntax disallows special characters outside the string operator.
+valid in the context jb is being written. To attempt to avoid syntax conflicts in any 
+embedding context, jb's syntax disallows special characters outside the string operator.
  
-    > qj oo email so qj@example.com sc oc
-    {"email":"qj@example.com"}
+    > jb oo email so jb@example.com sc oc
+    {"email":"jb@example.com"}
 
 If you want to be sure your special characters don't conflict with your context, use the
 concat operator instead.
@@ -125,15 +119,15 @@ concat operator instead.
 
 Concatenations evaluate to a string concatenating all enclosed expressions.
 
-    > qj co special  characters  hey et question no  problem et bang et nl cc
+    > jb co special  characters  hey et question no  problem et bang et nl cc
     "special characters hey? no problem!\n"
 
 
 If you embed arrays or objects within a concatenation they will be string-ified as JSON:
 
-    > qj co oe cc 
+    > jb co oe cc 
     "{}"
-    > qj co et lt ao 1 2 3 ac et gt cc
+    > jb co et lt ao 1 2 3 ac et gt cc
     "<[1,2,3]>"
 
 TODO - good idea? Or have js operator? Takes jq text and stringifies?
@@ -189,7 +183,7 @@ TODO - support non BMP directly, unlike JSON with surrogate pairs.
 
 Example:
 
-    > qj ut ffaa
+    > jb ut ffaa
     "\uffaa"
 
 API:
@@ -200,7 +194,7 @@ To include a unicode escape, use the unicode token:
 
     TODO clarify JSON's encoding habits
 
-Note: You can usually embed unicode straight into qj program text.
+Note: You can usually embed unicode straight into jb program text.
 
 ### Literals
 
@@ -213,16 +207,16 @@ A string literal is a sequence of characters that is > 0, != 2 in length.
 Concat has two rules: providing strings containing escape tokens, and
 nesting JSON. Some examples of using escape tokens:
 
-    > qj co wow et bang cc
+    > jb co wow et bang cc
     "wow!"
-    > qj co hi there cc
+    > jb co hi there cc
     "hithere"
-    > qj co hi et space there cc
+    > jb co hi et space there cc
     "hi there"
 
 JSON is quoted to form a valid string:
 
-    > qj co oo hi there oc cc
+    > jb co oo hi there oc cc
     "{\"hi\":\"there\"}"
 
 TODO - should nested concats collapse? Not much of a use-case
