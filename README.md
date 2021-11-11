@@ -40,7 +40,7 @@ be shorter than the equivalent JSON it produces
 
 
 
-## EXAMPLES
+## EXAMPLES
 
 Since no special characters are used within jb, it makes it easy to
 construct jb source code programatically. For instance, within shell code:
@@ -86,7 +86,7 @@ So:
     [{"jb is a so so language":[]}]
 
 
-## LANGUAGE
+## LANGUAGE
 
 ### TL;DR
 
@@ -184,7 +184,7 @@ Named special characters:
 - greatherthan | gt: >
 
 
-#### Unicode token - ut
+#### Unicode token - ut
 
 TODO - support non BMP directly, unlike JSON with surrogate pairs.
 
